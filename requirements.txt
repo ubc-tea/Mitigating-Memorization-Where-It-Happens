@@ -1,0 +1,47 @@
+# --------------------
+# Core ML
+# --------------------
+torch==2.3.0
+torchvision==0.18.0
+torchaudio==2.3.0
+triton==2.3.0
+
+numpy==1.26.4
+scipy
+pandas==2.2.2
+scikit-learn
+sympy==1.12
+
+# --------------------
+# HuggingFace stack
+# --------------------
+transformers==4.41.0
+datasets==2.20.0
+accelerate==0.33.0
+huggingface-hub==0.23.1
+tokenizers==0.19.1
+safetensors==0.4.3
+concept-erasure
+
+# --------------------
+# NLP / utils
+# --------------------
+regex==2024.5.15
+tqdm==4.66.4
+pyyaml==6.0.1
+requests==2.32.3
+
+# --------------------
+# Arrow / IO
+# --------------------
+pyarrow==17.0.0
+pyarrow-hotfix==0.6
+fsspec==2024.5.0
+xxhash==3.4.1
+
+# --------------------
+# Dev / tooling（可选）
+# --------------------
+black==24.4.2
+pre-commit==3.7.1
+typeguard==4.3.0
