@@ -17,7 +17,6 @@
   <a href="https://arxiv.org/pdf/2602.08901"><b>📄 Paper (PDF)</b></a> |
   <a href="#key-insight">Key Insight</a> |
   <a href="#why-gss">Why GSS</a> |
-  <a href="#reproducing-the-tinymem-results">Reproduce</a> |
   <a href="#using-gss-on-your-own-model">Use on your model</a> |
   <a href="#repository-structure">Repository</a>
 </p>
@@ -39,8 +38,7 @@ calibration.
   <sub>Fig. 1: (left) offline calibration estimates probe and steer directions from activation–gradient statistics, whitened by a background second moment; (right) online, the gate applies the correction only when |⟨h, u<sub>k</sub>⟩| > ε.</sub>
 </p>
 
-This release contains the implementation of GSS and everything needed to reproduce the
-TinyMem results (paper Table 1).
+This release contains the implementation of GSS for the TinyMem experiments (paper Table 1).
 
 ---
 
@@ -49,9 +47,6 @@ TinyMem results (paper Table 1).
 - [Key insight](#key-insight)
 - [Why GSS](#why-gss)
 - [Requirements](#requirements)
-- [Data and checkpoints](#data-and-checkpoints)
-- [Reproducing the TinyMem results](#reproducing-the-tinymem-results)
-- [Hyper-parameter search](#hyper-parameter-search)
 - [Using GSS on your own model](#using-gss-on-your-own-model)
 - [Method summary](#method-summary)
 - [Repository structure](#repository-structure)
@@ -116,128 +111,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-A single GPU is enough for every experiment below. The math settings also run on a CPU.
-
-## Data and checkpoints
-
-The datasets and TinyMem checkpoints are too large for git. Download them and place them
-as follows (or point the environment variables `GSS_TINYMEM_DATA` and `GSS_TINYMEM_CKPT`
-to other directories):
-
-```
-data/tinymem/
-  mult_noise.pt               # multiplication, noised sequences          (47 MB)
-  mult_backdoor.pt            # multiplication, backdoor (trigger "100")  (49 MB)
-  wiki_fast_noise_dup.pt      # WikiText, noised + duplicated sequences   (1.2 GB)
-  wiki_fast_backdoor_dup.pt   # WikiText, backdoor                        (1.3 GB)
-checkpoints/tinymem/
-  math_noise.pth              # 4-layer GPT-2, target  (Table 1, Math / Noise)
-  math_backdoor.pth           # 4-layer GPT-2, target  (Table 1, Math / Backdoor)
-  lm_noise.pth                # 4-layer GPT-2, target  (Table 1, Language / Noise)
-  lm_backdoor.pth             # 4-layer GPT-2, target  (Table 1, Language / Backdoor)
-  mult_clean_ep500.pth        # 4-layer GPT-2 trained on clean multiplication data (reference)
-  mult_clean_ep100.pth        # same, epoch 100 (reference)
-```
-
-Download link: **to be added**.
-
-<details>
-<summary>MD5 checksums</summary>
-
-| file | md5 |
-|---|---|
-| `data/tinymem/mult_noise.pt` | `92048e45e020ca210de895d1d5394a3d` |
-| `data/tinymem/mult_backdoor.pt` | `09a298ffc87673c9a5420fee2115a388` |
-| `data/tinymem/wiki_fast_noise_dup.pt` | `289e9d4be6867be6b84a9951c73576bb` |
-| `data/tinymem/wiki_fast_backdoor_dup.pt` | `8e927655bfd215a965a819116ef2783d` |
-| `checkpoints/tinymem/math_noise.pth` | `72ba2bce9f12529b24259aa7ff09ca47` |
-| `checkpoints/tinymem/math_backdoor.pth` | `9d8cf41deb013d8de851efc66c76a23f` |
-| `checkpoints/tinymem/lm_noise.pth` | `0e87a8a40bb57043c99d38b2144b7c81` |
-| `checkpoints/tinymem/lm_backdoor.pth` | `9b04ba612c6de4410df9fcfb71b25f8c` |
-| `checkpoints/tinymem/mult_clean_ep500.pth` | `f41382bb1f9f6764385d1fe4ce807419` |
-| `checkpoints/tinymem/mult_clean_ep100.pth` | `6ec92609396ed8d9315681d0a0f2acde` |
-
-</details>
-
-TinyMem models and datasets come from the TinyMem benchmark of
-[Sakarvadia et al. (2025)](https://arxiv.org/abs/2410.02159). To train new TinyMem models, use
-`src/memorization_in_toy_models.py`; see [docs/TinyMem_original_README.md](docs/TinyMem_original_README.md).
-
-**Reference models.** GSS needs a reference with the same tokenizer, competent in the same
-domain, and with low exposure to the evaluated sequences:
-
-| setting | references used |
-|---|---|
-| Math / Noise | `math_backdoor.pth` (`xbd`), `mult_clean_ep500.pth` (`clean500`), `mult_clean_ep100.pth` (`clean100`) |
-| Math / Backdoor | `math_noise.pth` (`xnoise`), `clean500`, `clean100` |
-| Language / Noise | `lm_backdoor.pth` (`xbd`) |
-| Language / Backdoor | `lm_noise.pth` (`xnoise`) |
-
-Each "sibling" model was trained on the same domain but never saw the noised (respectively
-backdoored) sequences of the other setting.
-
-## Reproducing the TinyMem results
-
-The fitted configuration of each setting is stored in
-[`configs/gss_tinymem_best.json`](configs/gss_tinymem_best.json). One command fits GSS
-(directions + gate threshold) and evaluates it. The steering hook stays active for every
-reported metric:
-
-```bash
-python scripts/gss_tinymem/run_gss_tinymem.py --setting math_noise
-python scripts/gss_tinymem/run_gss_tinymem.py --setting math_backdoor
-python scripts/gss_tinymem/run_gss_tinymem.py --setting lm_noise
-python scripts/gss_tinymem/run_gss_tinymem.py --setting lm_backdoor
-```
-
-Each run prints the unmodified baseline and the GSS numbers as JSON:
-
-- `paper_mem`: memorization in the TinyMem metric (one value per duplication class, or the attack success rate).
-- `test_acc` / `test_ppl`: utility on the clean test sets.
-- `gate_clean_test`: fraction of clean test tokens at which the gate fires.
-
-Each run takes 7–15 seconds on one NVIDIA L40S.
-
-`configs/gss_tinymem_best.json` holds two selections per setting: `paper` (selected on the
-evaluation metrics above, rule "memorization exactly 0, then best utility"; used by default)
-and `heldout` (selected on disjoint validation splits; `--protocol heldout`).
-
-Optional sanity check: `scripts/gss_tinymem/verify_fast_metric.py` confirms, row by row, that
-the single-forward memorization metric used by the search equals the generation-based TinyMem
-metric, with and without steering.
-
-## Hyper-parameter search
-
-`scripts/gss_tinymem/search.py` searches over the reference model, the high-signal threshold
-τ on ω, the hooked module, the subspace rank, the gate quantile, the steering strength, the
-steering sign, and the consecutive-exceedance requirement *r*. It has three stages:
-
-1. **Stage A (no generation).** Builds the directions for every (reference, τ, module, rank)
-   and measures gate selectivity: how often the gate fires right before a memorized token,
-   versus how often it fires on clean tokens.
-2. **Stage B.** Sweeps the gate quantile, strength, sign and *r* for the most selective
-   configurations, and measures memorization and utility.
-3. **Stage C.** Fits the selected configuration and evaluates it.
-
-Every result line is written to a `jsonl` file with a unique key, so interrupted runs resume.
-
-```bash
-# protocol "paper": select on the TinyMem evaluation metrics
-python scripts/gss_tinymem/search.py --setting math_backdoor --protocol paper --tag _paper --top_a 10
-# protocol "heldout": select on validation splits, report once on test
-python scripts/gss_tinymem/search.py --setting math_backdoor --top_a 10
-# write configs/gss_tinymem_best.json and results/gss_tinymem_search/SUMMARY.md
-python scripts/gss_tinymem/collect_best.py
-```
-
-`--kinds whitened,contrastive` also searches the contrastive construction (paper Eq. 9).
-The released configurations use the whitened construction (Eq. 7–8).
-
-Memorization during the search is computed with one teacher-forced forward pass: greedy
-decoding reproduces a target if and only if the argmax at every position of the target window
-equals the next target token. The model and the steering hook are causal, and EOS is masked
-exactly as `generate(min_length=max_length)` does, so the result is identical to generation
-while avoiding ~100 decoding steps per sequence.
+A single GPU is enough; the math settings also run on a CPU.
 
 ## Using GSS on your own model
 
