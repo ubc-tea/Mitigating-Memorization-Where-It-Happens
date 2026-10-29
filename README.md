@@ -16,7 +16,6 @@
 <p align="center">
   <a href="https://arxiv.org/pdf/2602.08901"><b>📄 Paper (PDF)</b></a> |
   <a href="#key-insight">Key Insight</a> |
-  <a href="#why-gss">Why GSS</a> |
   <a href="#using-gss-on-your-own-model">Use on your model</a> |
   <a href="#repository-structure">Repository</a>
 </p>
@@ -45,7 +44,6 @@ This release contains the implementation of GSS for the TinyMem experiments (pap
 ## Contents
 
 - [Key insight](#key-insight)
-- [Why GSS](#why-gss)
 - [Requirements](#requirements)
 - [Using GSS on your own model](#using-gss-on-your-own-model)
 - [Method summary](#method-summary)
@@ -74,29 +72,6 @@ do not need correction; GSS spends it only where the signal concentrates.
 
 A high-signal position is a *candidate* for correction, not a certified memorized token. GSS
 is evaluated by sequence-level reproduction and by independent utility metrics.
-
-## Why GSS
-
-- **Localize before intervening.** The target–reference signal is used only offline;
-  generation needs neither the reference model nor gradients.
-- **Closed-form directions.** Under a background normalization constraint, the probe–steer
-  pairs that maximize a first-order surrogate of the likelihood-reduction objective are the
-  leading singular vectors of a whitened gradient-weighted activation matrix. No iterative
-  optimization is needed.
-- **Gated, reversible correction.** Where no probe fires, the hidden state is left exactly
-  unchanged. Weights are never modified, so the intervention can be tuned or disabled at
-  inference time.
-
-From the [paper](https://arxiv.org/pdf/2602.08901):
-
-| Result | Summary |
-| --- | --- |
-| TinyMem | Zero observed reproduction under the evaluated protocol in all four noise/backdoor settings, with accuracy 96.98 / 96.82 on the math models (unmitigated 97.00 / 96.81). |
-| Pythia | (n,k)-memorization 52.87% → 6.93% on Pythia-2.8B and 89.31% → 6.96% on Pythia-6.9B, with test PPL 21.75 → 28.26 and 19.46 → 29.15. |
-| Cost | 10–100× less compute than optimization-based alternatives. |
-| Gate choice | The two-consecutive-position gate (r = 2) fires less often and costs less utility; the share of suppression it keeps depends on the setting (paper Sec. 5.6). |
-
-This release covers the TinyMem experiments; the other settings are described in the paper.
 
 ## Requirements
 
